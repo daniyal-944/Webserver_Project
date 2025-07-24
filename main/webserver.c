@@ -4,7 +4,6 @@
 #include "driver/gpio.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
-#include "esp_spi_flash.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "stdbool.h"
@@ -25,27 +24,45 @@ static const char *TAG_MAIN = "main";
 
 #define LED_PIN GPIO_NUM_2 
 static bool led_on = false;
+
 void led_init()
 {
     gpio_reset_pin(LED_PIN);
-	gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
-	gpio_set_level(LED_PIN, 0);
-	
+    gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(LED_PIN, 0);
 }
+
 void led_set_state(bool state)
 {
     if (state) {
         gpio_set_level(LED_PIN, 1);
+        ESP_LOGI("LED", "LED set to ON");
         led_on = true;
     } else {
         gpio_set_level(LED_PIN, 0);
+        ESP_LOGI("LED", "LED set to OFF");
         led_on = false;
     }
 }
+
+void led_blink(int times, int delay_ms)
+{
+    ESP_LOGI("LED", "Blinking %d times", times);
+    for (int i = 0; i < times; i++) {
+        gpio_set_level(LED_PIN, 1);
+        ESP_LOGI("LED", "Blink %d ON", i + 1);
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+        gpio_set_level(LED_PIN, 0);
+        ESP_LOGI("LED", "Blink %d OFF", i + 1);
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+    }
+}
+
 bool led_get_state()
 {
     return led_on;
 }
+
 
 /*``````````````````````````````````````````````````````````````````*/
 
@@ -183,14 +200,15 @@ esp_err_t index_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-// WebSocket handler
-esp_err_t websocket_handler(httpd_req_t *req)
-{
-    if (req->method == HTTP_GET) {
-        ESP_LOGI(TAG_WS, "WebSocket handshake done");
-        return httpd_ws_upgrade(req);
-    }
+httpd_ws_frame_t frame = {
+        .final = true,
+        .fragmented = false,
+        .type = HTTPD_WS_TYPE_TEXT,
+        .payload = NULL,
+        .len = 0,
+    };
 
+esp_err_t websocket_handler(httpd_req_t *req) {
     httpd_ws_frame_t frame = {
         .final = true,
         .fragmented = false,
@@ -199,10 +217,20 @@ esp_err_t websocket_handler(httpd_req_t *req)
         .len = 0,
     };
 
+    if (req->method == HTTP_GET) {
+        ESP_LOGI(TAG_WS, "WebSocket handshake done");
+        return httpd_ws_send_frame(req, &frame);
+    }
+
     esp_err_t ret = httpd_ws_recv_frame(req, &frame, 0);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG_WS, "Failed to receive WS frame header");
         return ret;
+    }
+
+    if (frame.type != HTTPD_WS_TYPE_TEXT) {
+        ESP_LOGW(TAG_WS, "Non-text frame received, ignoring");
+        return ESP_OK;
     }
 
     if (frame.len > 4095) {
@@ -223,11 +251,19 @@ esp_err_t websocket_handler(httpd_req_t *req)
     ESP_LOGI(TAG_WS, "Received: %s", (char *)frame.payload);
 
     // LED Control
-    if (strcmp((char *)frame.payload, "ON") == 0) {
-        led_set_state(true);
-    } else if (strcmp((char *)frame.payload, "OFF") == 0) {
-        led_set_state(false);
-    }
+       ESP_LOGI("WS", "Handling frame: %s", (char *)frame.payload);
+
+        if (strcmp((char *)frame.payload, "ON") == 0) {
+             ESP_LOGI("WS", "Turning LED ON + Blink");
+             led_set_state(true);
+             led_blink(5, 200);
+             led_set_state(true);
+            } else if (strcmp((char *)frame.payload, "OFF") == 0) {
+             ESP_LOGI("WS", "Turning LED OFF");
+             led_set_state(false);
+            } else {
+             ESP_LOGW("WS", "Unknown command: %s", (char *)frame.payload);
+            }
 
     const char *resp = led_get_state() ? "ON" : "OFF";
 
@@ -255,7 +291,7 @@ httpd_handle_t setup_websocket_server(void)
     };
 
     httpd_uri_t websocket = {
-        .uri = "/websocket",
+        .uri = "/ws",
         .method = HTTP_GET,
         .handler = websocket_handler,
         .user_ctx = NULL,
