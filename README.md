@@ -1,45 +1,50 @@
-# esp-idf-vscode-boilerplate
-Boilerplate for developing ESP32 projects using ESP-IDF and VS Code
+# 🖧 ESP32 WebSocket LED Control Web Server
 
-  > Note 1: You need to have installed [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) extension in your VS Code.
+## 📌 Overview
+This project demonstrates how to use the **ESP32** with **ESP-IDF** to host a **WebSocket-based web server** that allows real-time control of an onboard (or external) LED from a web browser interface. The communication is bi-directional — any state change is reflected back to the client.
 
-  > Note 2: Make sure that you have `ESP_IDF` environment variable (which leads to esp-idf folder) and path to XTENSA compiler _bin_ folder needs to be present on the `PATH`.
+---
 
-## How to use
+## 🚀 Features
 
-1. Clone repository
-```
-git clone https://github.com/abobija/esp-idf-vscode-boilerplate.git my-project
-```
+- 📡 **WiFi SoftAP Mode** — ESP32 acts as a WiFi Access Point.
+- 🌐 **Web Server with WebSocket Support** — serves HTML UI and handles WebSocket messages.
+- 💡 **Real-Time LED Control** — LED ON/OFF commands sent from web interface.
+- 🔁 **LED Blink Function** — Added blink animation for visual feedback.
+- 📁 **SPIFFS File System** — Used to store and serve `index.html`.
 
-2. Go inside of project folder
-```
-cd my-project
-```
+---
 
-3. Start VSC
-```
-code .
-```
+## 📂 Project Structure
 
-## Config, Build and Flash
+ESP32_WebSocket_LED/
+├── main/
+│ ├── main.c # Main application logic
+│ ├── CMakeLists.txt # CMake build file
+├── spiffs_image/
+│ └── index.html # Web interface HTML file
+├── sdkconfig # ESP-IDF configuration file
+├── partition.csv # Custom partition table with SPIFFS
+└── README.md # Project documentation (this file)
 
-```
-idf.py set-target esp32
-idf.py menuconfig
-idf.py build
-idf.py -p (PORT) flash
-```
 
-## Demo
+---
 
-[![Get started with ESP32 in VS CODE ... ESP-IDF](https://img.youtube.com/vi/aQi8qiW9fmg/mqdefault.jpg)](https://www.youtube.com/watch?v=aQi8qiW9fmg)
+## 🛠️ Requirements
 
-## Author
+- **ESP32 Dev Board**
+- **ESP-IDF v5.1.x**
+- Python (with `idf.py`)
+- USB to UART cable (for flashing and monitoring)
 
-GitHub: [abobija](https://github.com/abobija)<br>
-Homepage: [abobija.com](https://abobija.com)
+---
 
-## License
+## 🔧 Build & Flash Instructions
 
-[MIT](LICENSE)
+1. **Set up ESP-IDF**  
+   Follow the official guide: [https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/)
+
+2. **Clone this repository**  
+   ```bash
+   git clone https://github.com/daniyal-944/Webserver_Project
+   cd Webserver_Project
